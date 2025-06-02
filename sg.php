@@ -67,7 +67,7 @@ foreach ($lines as $target_string) {
     }
 
     // Membuat URL untuk sitemap
-    $htmlURL = $urlPath . $BRAND;
+    $htmlURL = $urlPath . $BRAND . '/';
 
     fwrite($sitemapFile, '  <url>' . PHP_EOL);
     fwrite($sitemapFile, '    <loc>' . $htmlURL . '</loc>' . PHP_EOL);
