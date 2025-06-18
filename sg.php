@@ -32,8 +32,8 @@ $titles = file('title.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 $descriptions = file('desc.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
 // Mengacak data
-shuffle($titles);
-shuffle($descriptions);
+// shuffle($titles);
+// shuffle($descriptions);
 
 // Menentukan jumlah iterasi berdasarkan data yang lebih sedikit
 $count = min(count($titles), count($descriptions));
